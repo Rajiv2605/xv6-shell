@@ -1,6 +1,9 @@
 struct stat;
 struct rtcdate;
 
+// assignment system calls
+int helloWorld(void);
+
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
