@@ -104,6 +104,7 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_helloWorld(void);
+extern int sys_numOpenFiles(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,7 +128,8 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_helloWorld]   sys_helloWorld
+[SYS_helloWorld]   sys_helloWorld,
+[SYS_numOpenFiles]   numOpenFiles
 };
 
 void

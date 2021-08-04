@@ -3,6 +3,7 @@ struct rtcdate;
 
 // assignment system calls
 int helloWorld(void);
+int numOpenFiles(void);
 
 // system calls
 int fork(void);

@@ -95,3 +95,9 @@ sys_helloWorld(void)
 {
   return helloWorld();
 }
+
+int
+sys_numOpenFiles(void)
+{
+  return numOpenFiles();
+}

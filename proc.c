@@ -539,3 +539,15 @@ helloWorld(void)
   cprintf("hello world\n");
   return 0;
 }
+
+int numOpenFiles(void)
+{
+  struct proc *curproc = myproc();
+  int count = 0;
+  for(int fd = 0; fd < NOFILE; fd++){
+    if(curproc->ofile[fd])
+      count++;
+  }
+
+  return count-3;
+}

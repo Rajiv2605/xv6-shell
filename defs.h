@@ -121,6 +121,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 int             helloWorld(void);
+int             numOpenFiles(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
