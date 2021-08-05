@@ -1,7 +1,7 @@
 #include "types.h"
 #include "x86.h"
 #include "defs.h"
-#include "date.h"
+// #include "date.h"
 #include "param.h"
 #include "memlayout.h"
 #include "mmu.h"
@@ -53,6 +53,10 @@ sys_sbrk(void)
   addr = myproc()->sz;
   if(growproc(n) < 0)
     return -1;
+
+  // increasing heap size by n if successfully allocated
+  myproc()->heapsz += n;
+  
   return addr;
 }
 
@@ -100,4 +104,16 @@ int
 sys_numOpenFiles(void)
 {
   return numOpenFiles();
+}
+
+int
+sys_memAlloc(void)
+{
+  return memAlloc();
+}
+
+int
+sys_getprocesstimedetails(void)
+{
+  return getprocesstimedetails();
 }

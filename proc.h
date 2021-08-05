@@ -1,3 +1,5 @@
+#include "date.h"
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -37,6 +39,7 @@ enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
+  uint heapsz;                 // Size of heap memory (bytes)
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
@@ -49,6 +52,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  struct rtcdate processCreationDateTime; // Time at which the process was created
+  struct rtcdate lastContextSwitchInTime; // Time at which process was context switched in
+  struct rtcdate lastContextSwitchOutTime;// Time at which process was context switched out
+  char isContextSwitchedOut;
 };
 
 // Process memory is laid out contiguously, low addresses first:

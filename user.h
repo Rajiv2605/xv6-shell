@@ -4,6 +4,8 @@ struct rtcdate;
 // assignment system calls
 int helloWorld(void);
 int numOpenFiles(void);
+int memAlloc(void);
+int getprocesstimedetails(void);
 
 // system calls
 int fork(void);

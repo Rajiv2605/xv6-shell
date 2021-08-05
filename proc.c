@@ -91,6 +91,9 @@ found:
 
   release(&ptable.lock);
 
+  // Set the time of process creation
+  cmostime(&p->processCreationDateTime);
+
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
     p->state = UNUSED;
@@ -130,6 +133,10 @@ userinit(void)
     panic("userinit: out of memory?");
   inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
   p->sz = PGSIZE;
+
+  // setting init's initial heap size to 0
+  p->heapsz = 0;
+
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
   p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
@@ -197,8 +204,13 @@ fork(void)
     return -1;
   }
   np->sz = curproc->sz;
+  
+  // inheriting heap from parent
+  np->heapsz = curproc->heapsz;
+
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->isContextSwitchedOut = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -343,6 +355,9 @@ scheduler(void)
       switchuvm(p);
       p->state = RUNNING;
 
+      // set time at which the process is switched into context
+      cmostime(&p->lastContextSwitchInTime);
+
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -377,6 +392,8 @@ sched(void)
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
+  cmostime(&p->lastContextSwitchOutTime);
+  p->isContextSwitchedOut = 1;
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
 }
@@ -549,5 +566,37 @@ int numOpenFiles(void)
       count++;
   }
 
-  return count-3;
+  return count;
+}
+
+int memAlloc(void)
+{
+  struct proc *curproc = myproc();
+  // int total = 0;
+  // struct proc *p;
+  // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    // total += p->heapsz;
+  // }
+
+  // return total;
+  return curproc->heapsz;
+}
+
+int getprocesstimedetails(void)
+{
+  struct proc *curproc = myproc();
+  struct rtcdate *pcdt, *lcsit, *lcsot;
+  pcdt = &curproc->processCreationDateTime;
+  lcsit = curproc->isContextSwitchedOut?&curproc->lastContextSwitchInTime:pcdt;
+  lcsit = &curproc->lastContextSwitchInTime;
+  lcsot = &curproc->lastContextSwitchOutTime;
+
+  if(!pcdt || !lcsit || !lcsot || !curproc)
+    return -1;
+
+  cprintf("processCreationDateTime: %d:%d:%d %d:%d:%d\n", pcdt->second, pcdt->minute, pcdt->hour, pcdt->day, pcdt->month, pcdt->year);
+  cprintf("processLastContextSwitchedOutDateTime: %d:%d:%d %d:%d:%d\n", lcsit->second, lcsit->minute, lcsit->hour, lcsit->day, lcsit->month, lcsit->year);
+  cprintf("processLastContextSwitchedInDateTime: %d:%d:%d %d:%d:%d\n", lcsot->second, lcsot->minute, lcsot->hour, lcsot->day, lcsot->month, lcsot->year);
+
+  return 1;
 }

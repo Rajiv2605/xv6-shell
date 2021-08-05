@@ -105,6 +105,8 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_helloWorld(void);
 extern int sys_numOpenFiles(void);
+extern int sys_memAlloc(void);
+extern int sys_getprocesstimedetails(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -129,7 +131,9 @@ static int (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_helloWorld]   sys_helloWorld,
-[SYS_numOpenFiles]   numOpenFiles
+[SYS_numOpenFiles]   sys_numOpenFiles,
+[SYS_memAlloc]   sys_memAlloc,
+[SYS_getprocesstimedetails]   sys_getprocesstimedetails
 };
 
 void

@@ -22,3 +22,5 @@
 #define SYS_close  21
 #define SYS_helloWorld 22
 #define SYS_numOpenFiles 23
+#define SYS_memAlloc 24
+#define SYS_getprocesstimedetails 25
