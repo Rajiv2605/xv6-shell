@@ -565,7 +565,8 @@ helloWorld(void)
   return 0;
 }
 
-int numOpenFiles(void)
+int
+numOpenFiles(void)
 {
   struct proc *curproc = myproc();
   int count = 0;
@@ -577,14 +578,16 @@ int numOpenFiles(void)
   return count;
 }
 
-int memAlloc(void)
+int
+memAlloc(void)
 {
   struct proc *curproc = myproc();
 
   return curproc->heapsz;
 }
 
-int getprocesstimedetails(void)
+int
+getprocesstimedetails(void)
 {
   struct proc *curproc = myproc();
   struct rtcdate *pcdt, *lcsit, *lcsot;
@@ -601,4 +604,16 @@ int getprocesstimedetails(void)
   cprintf("processLastContextSwitchedInDateTime: %d:%d:%d %d:%d:%d\n", lcsot->second, lcsot->minute, lcsot->hour, lcsot->day, lcsot->month, lcsot->year);
 
   return 1;
+}
+
+int
+psinfo(void)
+{
+  struct proc* p;
+  char *procstates[] = { "UNUSED", "EMBRYO", "SLEEPING", "RUNNABLE", "RUNNING", "ZOMBIE" };
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    cprintf("%s %d %s\n", p->name, p->pid, procstates[p->state]);
+  }
+
+  return 0;
 }

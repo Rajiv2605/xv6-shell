@@ -117,3 +117,8 @@ sys_getprocesstimedetails(void)
 {
   return getprocesstimedetails();
 }
+
+int sys_psinfo(void)
+{
+  return psinfo();
+}

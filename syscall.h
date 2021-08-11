@@ -24,3 +24,4 @@
 #define SYS_numOpenFiles 23
 #define SYS_memAlloc 24
 #define SYS_getprocesstimedetails 25
+#define SYS_psinfo 26
