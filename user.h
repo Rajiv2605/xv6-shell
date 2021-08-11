@@ -9,7 +9,7 @@ int getprocesstimedetails(void);
 
 // system calls
 int fork(void);
-int exit(void) __attribute__((noreturn));
+int exit(int) __attribute__((noreturn));
 int wait(void);
 int pipe(int*);
 int write(int, const void*, int);

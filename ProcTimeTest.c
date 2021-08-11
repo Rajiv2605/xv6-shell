@@ -4,6 +4,9 @@
 
 int main(int argc, char *argv[])
 {
+    char *inpt = malloc(10*sizeof(char));
+    read(0, inpt, 10);
     getprocesstimedetails();
-    exit();
+    free(inpt);
+    exit(0);
 }

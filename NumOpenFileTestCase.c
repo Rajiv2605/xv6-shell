@@ -11,5 +11,5 @@ int main(void)
     printf(1, "Total Number of Open Files: %d\n", numOpenFiles());
     close(fd);
     printf(1, "Total Number of Open Files: %d\n", numOpenFiles());
-    exit();
+    exit(0);
 }

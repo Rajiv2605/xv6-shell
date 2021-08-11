@@ -52,6 +52,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  int status;                  // Exit status of the process
 
   struct rtcdate processCreationDateTime; // Time at which the process was created
   struct rtcdate lastContextSwitchInTime; // Time at which process was context switched in

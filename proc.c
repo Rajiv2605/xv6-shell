@@ -237,7 +237,7 @@ fork(void)
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 void
-exit(void)
+exit(int status)
 {
   struct proc *curproc = myproc();
   struct proc *p;
@@ -275,6 +275,7 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
+  curproc->status = status;
   sched();
   panic("zombie exit");
 }
@@ -572,13 +573,7 @@ int numOpenFiles(void)
 int memAlloc(void)
 {
   struct proc *curproc = myproc();
-  // int total = 0;
-  // struct proc *p;
-  // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    // total += p->heapsz;
-  // }
 
-  // return total;
   return curproc->heapsz;
 }
 
