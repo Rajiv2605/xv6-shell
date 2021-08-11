@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include <stddef.h> // for NULL pointer
 
 struct {
   struct spinlock lock;
@@ -283,7 +284,7 @@ exit(int status)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(void)
+wait(int *status)
 {
   struct proc *p;
   int havekids, pid;
@@ -308,6 +309,9 @@ wait(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+
+        *status = p->status;
+
         release(&ptable.lock);
         return pid;
       }
@@ -316,6 +320,8 @@ wait(void)
     // No point waiting if we don't have any children.
     if(!havekids || curproc->killed){
       release(&ptable.lock);
+      if(status != NULL)
+        *status = -1;
       return -1;
     }
 
