@@ -119,6 +119,8 @@ void pipe_parser(char *cmd)
         //     printf(1, "%s\n", cmds[i]);
         // cmds[] contains commands
         // fork and pipe here
+        int pipeFD[2];
+
     }
     else
         sucexec_parser(cmd);
@@ -128,13 +130,30 @@ void sc_parser(char *inputCmd)
 {
     if(strchr(inputCmd, ';') != NULL)
     {
-        char *cmds[2];
+        char *cmds[2]; // can be made dynamic
         parse_any(inputCmd, cmds, ';');
         // printf(1, "PARALLEL command\n");
         // for(int i=0; i<2; i++)
         //     printf(1, "%s\n", cmds[i]);
         // cmds[2] contains the seperate commands
         // fork here and run pipe parser
+        int pd;
+        for(int i=0; i<2; i++)
+        {
+            // fork and execute cmds[i] in child process
+            if((pd=fork())==0)
+            {
+                pipe_parser(cmds[i]);
+                exit(0);
+            }
+        }
+
+        int cpid, status;
+        for(int i=0; i<2; i++)
+        {
+            cpid = wait(&status);
+            printf(1, "Process %d terminated.\n", cpid);
+        }
     }
     else
         pipe_parser(inputCmd);
