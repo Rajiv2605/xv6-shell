@@ -1,91 +1,141 @@
-#include "helper.h"
-
-void cmd_parser(char *inputCmd)
+void parse_any(char *inputCmd, char **cmds, char pp)
 {
-    // setup the command table.
-    char n_cmds = 0;
-    char i=0;
-    while(inputCmd[i]!='\n')
-    {
-        if((inputCmd[i]=='|' && inputCmd[i+1]!='|') || inputCmd[i]==';')
-            n_cmds++;
-        else if((inputCmd[i]=='|' && inputCmd[i+1]=='|') || (inputCmd[i]=='&' && inputCmd[i+1]=='&'))
-        {
-            i++;
-            n_cmds++;
-        }
+    // add safety checks here
 
+    char *idx;
+    int i=0;
+    char *idx_hist = NULL;
+    while(1)
+    {
+        if((idx=strchr(inputCmd, pp))==NULL)
+        {
+            idx_hist += 2; // reaching the start of the last command
+            int j=0;
+            cmds[i] = malloc(10*sizeof(char));
+            while(*idx_hist != '\0')
+                cmds[i][j++] = *(idx_hist++);
+
+            cmds[i][j] = '\0';
+
+            break;
+        }
+        idx_hist = idx;
+        cmds[i] = malloc(50*sizeof(char));
+        idx--; // accounting for space before pipe
+        char *p = inputCmd;
+        int j=0;
+        while(p!=idx)
+        {
+            cmds[i][j++] = *p;
+            p++;
+        }
+        cmds[i][j] = '\0';
+        inputCmd = idx+3; // reaching the start of the next command
         i++;
     }
-    cmdTable = malloc(n_cmds*sizeof(struct cmd));
+}
 
-    // initialize the table with default values
-    for(struct cmd* p=cmdTable; p!=NULL; p++)
+void parse_sucexec(char *inputCmd, char **cmds, char pp)
+{
+    // add safety checks here
+
+    char *idx;
+    int i=0;
+    char *idx_hist = NULL;
+    while(1)
     {
-        p->cmd = "";
-        p->redir = 0;
-        p->isPipe = 0;
-        p->status = 0;
-        p->seqno = 0;
-        p->isAndOr = 0;
+        if((idx=strchr(inputCmd, pp))==NULL)
+        {
+            idx_hist += 3; // reaching the start of the last command
+            int j=0;
+            cmds[i] = malloc(10*sizeof(char));
+            while(*idx_hist != '\0')
+                cmds[i][j++] = *(idx_hist++);
+
+            cmds[i][j] = '\0';
+
+            break;
+        }
+        idx_hist = idx;
+        cmds[i] = malloc(50*sizeof(char));
+        idx--; // accounting for space before pipe
+        char *p = inputCmd;
+        int j=0;
+        while(p!=idx)
+        {
+            cmds[i][j++] = *p;
+            p++;
+        }
+        cmds[i][j] = '\0';
+        inputCmd = idx+4; // reaching the start of the next command
+        i++;
     }
+}
 
-    char *cmdClean = strtok(inputCmd, "\n");
-    struct cmd* cmd_ptr = cmdTable;
-    char *seg = strtok(cmdClean, " ");
-    char idx = 0;
-    char seq = 0;
-    do
+void run_cmd(char *cmd)
+{
+    // check for which command, I/O redirection
+}
+
+void sucexec_parser(char *cmd)
+{
+    // check for &&/|| operators
+    if(strchr(cmd, '|')!=NULL)
     {
-        if(idx==0)
-        {
-            cmd_ptr->cmd = seg;
-            cmd_ptr->seqno = seq;
-        }
-        else
-        {
-            if(seg[0]=='>')
-                cmd_ptr->redir = 1;
-            else if(seg[0]=='<')
-                cmd_ptr->redir = -1;
-
-            if(seg[0]=='|' && strlen(seg)==1)
-                cmd_ptr->isPipe = 1;
-
-            if(seg[0]=='|' && strlen(seg)==2)
-                cmd_ptr->isAndOr = -1;
-            if(seg[0]=='&' && strlen(seg)==2)
-                cmd_ptr->isAndOr = 1;
-        }
-            cmd_ptr->args[idx-1] = seg;
-        
-        idx++;
-
-        if(seg[0]=="|" || seg[0]=="&" || seg[0]==";")
-        {
-            if(seg[0]==';')
-                seq++;
-            cmd_ptr++;
-            idx = 0;
-        }
-    } while(seg != NULL);
-}
-
-void free_cmdtable(void)
-{
-    free(cmdTable);
-}
-
-void cmd_run(char **args)
-{
-    int cpid = fork();
-    if(cpid > 0) // parent
-        wait(NULL);
+        char *cmds[2];
+        parse_sucexec(cmd, cmds, '|');
+        // printf(1, "OR command\n");
+        // for(int i=0; i<2; i++)
+        //     printf(1, "%s\n", cmds[i]);
+        // sequentially run cmds[]
+    }
+    else if(strchr(cmd, '&') != NULL)
+    {
+        char *cmds[2];
+        parse_sucexec(cmd, cmds, '&');
+        // printf(1, "AND command\n");
+        // for(int i=0; i<2; i++)
+        //     printf(1, "%s\n", cmds[i]);
+        // sequentially run cmds[]
+    }
     else
+        run_cmd(cmd);
+}
+
+void run_pipes(char *cmd1, char *cmd2)
+{
+    // call function to execute per command
+}
+
+void pipe_parser(char *cmd)
+{
+    char *test;
+    if((test=strchr(cmd, '|')) != NULL && *(test+1)!='|')
     {
-        /* 
-            check for special characters: ; | > < && ||
-            parse commands
-        */
+        char *cmds[10];
+        parse_any(cmd, cmds, '|');
+        // printf(1, "PIPE command\n");
+        // for(int i=0; i<2; i++)
+        //     printf(1, "%s\n", cmds[i]);
+        // cmds[] contains commands
+        // fork and pipe here
     }
+    else
+        sucexec_parser(cmd);
+}
+
+void sc_parser(char *inputCmd)
+{
+    if(strchr(inputCmd, ';') != NULL)
+    {
+        char *cmds[2];
+        parse_any(inputCmd, cmds, ';');
+        // printf(1, "PARALLEL command\n");
+        // for(int i=0; i<2; i++)
+        //     printf(1, "%s\n", cmds[i]);
+        // cmds[2] contains the seperate commands
+        // fork here and run pipe parser
+    }
+    else
+        pipe_parser(inputCmd);
 }
