@@ -20,6 +20,9 @@ int main(int argc, char **argv)
             i++;
         }
 
+        if(strcmp("exit", cmd)==0)
+            break;
+
         sc_parser(cmd);
     }
     exit(0);
