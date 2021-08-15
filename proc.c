@@ -612,8 +612,52 @@ psinfo(void)
   struct proc* p;
   char *procstates[] = { "UNUSED", "EMBRYO", "SLEEPING", "RUNNABLE", "RUNNING", "ZOMBIE" };
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    cprintf("%s %d %s\n", p->name, p->pid, procstates[p->state]);
+    if(p->state == RUNNING || p->state == RUNNABLE || p->state== SLEEPING)
+      cprintf("%s %d %s\n", p->name, p->pid, procstates[p->state]);
   }
 
   return 0;
+}
+
+int procinfo(int pid)
+{
+  int isPresent = 0;
+  struct proc *curproc;
+  for(curproc=ptable.proc; curproc < &ptable.proc[NPROC]; curproc++)
+  {
+    if(curproc->pid == pid)
+    {
+      isPresent = 1;
+      break;
+    }
+  }
+
+  if(!isPresent)
+  {
+    cprintf("Process not found!\n");
+    return -1;
+  }
+
+  int count = 0;
+  for(int fd = 0; fd < NOFILE; fd++){
+    if(curproc->ofile[fd])
+      count++;
+  }
+  cprintf("Number of files opened: %d\n", count);
+  cprintf("Memory allocated: %d\n", curproc->heapsz);
+
+  struct rtcdate *pcdt, *lcsit, *lcsot;
+  pcdt = &curproc->processCreationDateTime;
+  lcsit = curproc->isContextSwitchedOut?&curproc->lastContextSwitchInTime:pcdt;
+  lcsit = &curproc->lastContextSwitchInTime;
+  lcsot = &curproc->lastContextSwitchOutTime;
+
+  if(!pcdt || !lcsit || !lcsot || !curproc)
+    return -1;
+
+  cprintf("Creation time: %d:%d:%d %d:%d:%d\n", pcdt->second, pcdt->minute, pcdt->hour, pcdt->day, pcdt->month, pcdt->year);
+  cprintf("Last Context Switched in time: %d:%d:%d %d:%d:%d\n", lcsot->second, lcsot->minute, lcsot->hour, lcsot->day, lcsot->month, lcsot->year);  
+  cprintf("Last Context Switched out time: %d:%d:%d %d:%d:%d\n", lcsit->second, lcsit->minute, lcsit->hour, lcsit->day, lcsit->month, lcsit->year);
+
+  return 1;
 }

@@ -7,6 +7,7 @@ int numOpenFiles(void);
 int memAlloc(void);
 int getprocesstimedetails(void);
 int psinfo(void);
+int procinfo(int);
 
 // system calls
 int fork(void);

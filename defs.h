@@ -124,7 +124,8 @@ int             helloWorld(void);
 int             numOpenFiles(void);
 int             memAlloc(void);
 int             getprocesstimedetails(void);
-int            psinfo(void);
+int             psinfo(void);
+int             procinfo(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

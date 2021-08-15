@@ -14,8 +14,12 @@ sys_fork(void)
 }
 
 int
-sys_exit(int status)
+sys_exit(void)
 {
+  int status;
+  if( argint(0, &status) < 0 )
+    return -1;
+
   exit(status);
   return 0;  // not reached
 }
@@ -23,7 +27,11 @@ sys_exit(int status)
 int
 sys_wait(void)
 {
-  return wait(0);
+  int *p;
+  if(argptr(0, (void*)&p, sizeof(int))<0){
+    return -1;
+  }
+  return wait(p);
 }
 
 int
@@ -118,7 +126,17 @@ sys_getprocesstimedetails(void)
   return getprocesstimedetails();
 }
 
-int sys_psinfo(void)
+int
+sys_psinfo(void)
 {
   return psinfo();
+}
+
+int
+sys_procinfo(void)
+{
+  int pid;
+  if( argint(0, &pid) < 0 )
+    return -1;
+  return procinfo(pid);
 }
