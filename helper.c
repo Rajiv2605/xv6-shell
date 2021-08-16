@@ -78,31 +78,28 @@ void run_cmd(char *cmd)
     char in_file[20];
     char out_file[20];
     char *idx;
-    // char *cmd_aug = malloc(sizeof(char)*(sizeof(cmd)+1));
     int i=0;
     char in_dir=0;
     char out_dir=0;
-    // while(i < sizeof(cmd))
-    // {
-    //     cmd_aug[i] = cmd[i];
-    //     i++;
-    // }
-    // cmd_aug[i] = ' ';
-    // i=0;
+
     if((idx=strchr(cmd, '>'))!=NULL)
     {
         out_dir = 1;
-        while(*idx++ != ' ');
+        idx++;
+        while(*idx == ' ')
+            idx++;
         while(*idx != ' ')
-            in_file[i++] = *idx++; 
+            out_file[i++] = *idx++;
     }
     i=0;
     if((idx=strchr(cmd, '<'))!=NULL)
     {
         in_dir = 1;
-        while(*idx++ != ' ');
+        idx++;
+        while(*idx == ' ')
+            idx++;
         while(*idx != ' ')
-            out_file[i++] = *idx++; 
+            in_file[i++] = *idx++;
     }
 
     char *cmd_name;
@@ -111,16 +108,21 @@ void run_cmd(char *cmd)
     if(fork()==0)
     {
         // open files if needed
-        int fd_in, fd_out;
+        int fd_in;
+        int fd_out;
         if(in_dir)
         {
+            // printf(1, "In file: %s\n", in_file);
             fd_in = open(in_file, O_RDONLY);
-            // dup2(fd_in, 0);
             close(0);
+            if(open(in_file, O_RDONLY)<0)
+                printf(1, "Error opening file %s!\n", in_file);
+            // dup2(fd_in, 0);
             dup(fd_in);
         }
         if(out_dir)
         {
+            // printf(1, "Out file: %s\n", out_file);
             fd_out = open(out_file, O_WRONLY);
             // dup2(fd_out, 1);
             close(1);
@@ -128,7 +130,6 @@ void run_cmd(char *cmd)
         }
 
         // find which command it is
-        // printf(1, "CMD:: %s\n", cmd);
         if(strchr(cmd, ' ')==NULL)
             cmd_name = cmd;
         else
@@ -136,10 +137,12 @@ void run_cmd(char *cmd)
             isDynamic = 1;
             cmd_name = malloc(sizeof(char)*15);
             idx = cmd;
+            i=0;
             while(*idx != ' ')
                 cmd_name[i++] = *idx++;
         }
         // i=0;
+        // printf(1, "Command name: %s\n", cmd_name);
         if(strcmp(cmd_name, "ls")==0)
         {
             char *args[] = {cmd_name, NULL};
@@ -158,6 +161,11 @@ void run_cmd(char *cmd)
                     filename[i++] = *idx++;
 
                 char *args[] = {cmd_name, filename, NULL};
+                exec(args[0], args);
+            }
+            else if(in_dir)
+            {
+                char *args[] = {cmd_name, NULL};
                 exec(args[0], args);
             }
         }
@@ -198,14 +206,14 @@ void run_cmd(char *cmd)
                 echo_string[i++] = *idx++;
             char *args[] = {cmd_name, echo_string, NULL};
             exec(cmd_name, args);
-            exit(0);
+            // exit(0);
         }
         else if(strcmp(cmd_name, "wc")==0)
         {
             // dk how to handle this.
             char *args[] = {cmd_name, NULL};
             exec(args[0], args);
-            exit(0);
+            // exit(0);
         }
         else if(strcmp(cmd_name, "ps")==0)
         {
