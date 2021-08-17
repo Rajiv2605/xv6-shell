@@ -93,7 +93,7 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
     }
 }
 
-void run_cmd(char *cmd, int *sts)
+void run_cmd(char *cmd, int *sts, int isPipe)
 {
     // check for which command, I/O redirection
     char in_file[20];
@@ -134,17 +134,18 @@ void run_cmd(char *cmd, int *sts)
         if(in_dir)
         {
             // printf(1, "In file: %s\n", in_file);
-            fd_in = open(in_file, O_RDONLY);
-            close(0);
-            if(open(in_file, O_RDONLY)<0)
+            fd_in = open(in_file, 0);
+            if(fd_in < 0)
                 printf(1, "Error opening file %s!\n", in_file);
-            // dup2(fd_in, 0);
+            close(0);
             dup(fd_in);
         }
         if(out_dir)
         {
             // printf(1, "Out file: %s\n", out_file);
-            fd_out = open(out_file, O_WRONLY);
+            fd_out = open(out_file, 1);
+            if(fd_out < 0)
+                printf(1, "Error opening file %s!\n", out_file);
             // dup2(fd_out, 1);
             close(1);
             dup(fd_out);
@@ -172,21 +173,22 @@ void run_cmd(char *cmd, int *sts)
         else if(strcmp(cmd_name, "cat")==0)
         {
             // parse filename if no redirection.
-            if(!in_dir)
+            if(in_dir || isPipe)
+            {
+                char *args[] = {cmd_name, NULL};
+                exec(args[0], args);
+            }
+            else if(!in_dir)
             {
                 idx = strchr(cmd, ' ');
-                while(*idx++ != ' ');
+                while(*idx == ' ')
+                    idx++;
                 char filename[20];
                 i=0;
                 while(*idx != '\0')
                     filename[i++] = *idx++;
 
                 char *args[] = {cmd_name, filename, NULL};
-                exec(args[0], args);
-            }
-            else if(in_dir)
-            {
-                char *args[] = {cmd_name, NULL};
                 exec(args[0], args);
             }
         }
@@ -200,7 +202,12 @@ void run_cmd(char *cmd, int *sts)
             while(*idx != ' ')
                 pattern[i++] = *idx++;
 
-            if(!in_dir)
+            if(in_dir || isPipe)
+            {
+                char *args[] = {cmd_name, pattern, NULL};
+                exec(args[0], args);
+            }
+            else if(!in_dir)
             {
                 i=0;
                 while(*idx == ' ')
@@ -260,7 +267,7 @@ void run_cmd(char *cmd, int *sts)
         else
         {
             printf(1, "Illegal command!\n");
-            exit(0);
+            exit(-1);
         }
     }
     else
@@ -286,7 +293,10 @@ void sucexec_parser(char *cmd)
         // printf(1, "1st command: %s\n", cmds[0]);
         // printf(1, "2nd command: %s\n", cmds[1]);
         if(fork()==0)
-            run_cmd(cmds[0], &status);
+        {
+            run_cmd(cmds[0], &status, 0);
+            free(cmds[0]);
+        }
 
         int status2;
         wait(&status2);
@@ -295,7 +305,10 @@ void sucexec_parser(char *cmd)
             return;
         
         if(fork()==0)
-            run_cmd(cmds[1], &status);
+        {
+            run_cmd(cmds[1], &status, 0);
+            free(cmds[1]);
+        }
 
         wait(&status);
         // printf(1, "OR command\n");
@@ -309,7 +322,10 @@ void sucexec_parser(char *cmd)
         parse_sucexec(cmd, cmds, '&');
         // printf(1, "1st command: %s\n", cmds[0]);
         if(fork()==0)
-            run_cmd(cmds[0], &status);
+        {
+            run_cmd(cmds[0], &status, 0);
+            free(cmds[0]);
+        }
 
         int status2;
         wait(&status2);
@@ -318,7 +334,10 @@ void sucexec_parser(char *cmd)
             return;
 
         if(fork()==0)
-            run_cmd(cmds[1], &status);
+        {
+            run_cmd(cmds[1], &status, 0);
+            free(cmds[1]);
+        }
 
         wait(&status);
         // printf(1, "AND command\n");
@@ -327,7 +346,7 @@ void sucexec_parser(char *cmd)
         // sequentially run cmds[]
     }
     else
-        run_cmd(cmd, &status);
+        run_cmd(cmd, &status, 0);
 }
 
 void run_pipe(char *cmd1, char *cmd2)
@@ -349,7 +368,8 @@ void run_pipe(char *cmd1, char *cmd2)
         dup(pipe_fd[1]);
         close(pipe_fd[0]);
         close(pipe_fd[1]);
-        run_cmd(cmd1, &status);
+        run_cmd(cmd1, &status, 1);
+        exit(0);
     }
 
     // 2nd chlid, right end of the pipe
@@ -359,7 +379,8 @@ void run_pipe(char *cmd1, char *cmd2)
         dup(pipe_fd[0]);
         close(pipe_fd[0]);
         close(pipe_fd[1]);
-        run_cmd(cmd2, &status);
+        run_cmd(cmd2, &status, 1);
+        exit(0);
     }
 
     close(pipe_fd[0]);
@@ -381,8 +402,8 @@ void pipe_parser(char *cmd)
         // cmds[] contains commands
         // fork and pipe here
         run_pipe(cmds[0], cmds[1]);
-
-
+        free(cmds[0]);
+        free(cmds[1]);
     }
     else
         sucexec_parser(cmd);
@@ -390,7 +411,7 @@ void pipe_parser(char *cmd)
 
 void sc_parser(char *inputCmd)
 {
-    printf(1, "beginning to parse...\n");
+    // printf(1, "beginning to parse...\n");
     if(strchr(inputCmd, ';') != NULL)
     {
         char *cmds[2]; // can be made dynamic
@@ -400,13 +421,13 @@ void sc_parser(char *inputCmd)
         //     printf(1, "%s\n", cmds[i]);
         // cmds[2] contains the seperate commands
         // fork here and run pipe parser
-        int pd;
         for(int i=0; i<2; i++)
         {
             // fork and execute cmds[i] in child process
-            if((pd=fork())==0)
+            if(fork()==0)
             {
                 pipe_parser(cmds[i]);
+                free(cmds[i]);
                 exit(0);
             }
         }

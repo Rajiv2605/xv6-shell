@@ -27,10 +27,11 @@ int main(int argc, char **argv)
         }
         cmd[i] = '\0';
             
-        printf(1, "shell command is: %s\n", cmd);
+        // printf(1, "shell command is: %s\n", cmd);
         if(strcmp("exit", cmd)==0)
             break;
 
+        // int fd = open(cmd, 0);
         sc_parser(cmd);
 
         free(inputCmd);
