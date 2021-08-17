@@ -9,7 +9,9 @@ void parse_any(char *inputCmd, char **cmds, char pp)
     {
         if((idx=strchr(inputCmd, pp))==NULL)
         {
-            idx_hist += 2; // reaching the start of the last command
+            idx_hist += 1; // reaching the start of the last command
+            while(*idx_hist == ' ')
+                idx_hist++;
             int j=0;
             cmds[i] = malloc(10*sizeof(char));
             while(*idx_hist != '\0')
@@ -22,6 +24,9 @@ void parse_any(char *inputCmd, char **cmds, char pp)
         idx_hist = idx;
         cmds[i] = malloc(50*sizeof(char));
         idx--; // accounting for space before pipe
+        while(*idx == ' ')
+            idx--;
+        idx++;
         char *p = inputCmd;
         int j=0;
         while(p!=idx)
@@ -30,7 +35,13 @@ void parse_any(char *inputCmd, char **cmds, char pp)
             p++;
         }
         cmds[i][j] = '\0';
-        inputCmd = idx+3; // reaching the start of the next command
+        // inputCmd = idx+3; // reaching the start of the next command
+        while(*idx==' ')
+            idx++;
+        idx++;
+        while(*idx==' ')
+            idx++;
+        inputCmd = idx;
         i++;
     }
 }
@@ -47,6 +58,8 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
         if((idx=strchr(inputCmd, pp))==NULL)
         {
             idx_hist += 3; // reaching the start of the last command
+            while(*idx_hist == ' ')
+                idx_hist++;
             int j=0;
             cmds[i] = malloc(10*sizeof(char));
             while(*idx_hist != '\0')
@@ -58,7 +71,10 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
         }
         idx_hist = idx;
         cmds[i] = malloc(50*sizeof(char));
-        idx--; // accounting for space before pipe
+        idx--; // accounting for space before operator
+        while(*idx==' ')
+            idx--;
+        idx++;
         char *p = inputCmd;
         int j=0;
         while(p!=idx)
@@ -67,12 +83,17 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
             p++;
         }
         cmds[i][j] = '\0';
-        inputCmd = idx+4; // reaching the start of the next command
+        while(*idx==' ')
+            idx++;
+        idx+=2;
+        while(*idx==' ')
+            idx++;
+        inputCmd = idx;
         i++;
     }
 }
 
-void run_cmd(char *cmd)
+void run_cmd(char *cmd, int *sts)
 {
     // check for which command, I/O redirection
     char in_file[20];
@@ -185,7 +206,7 @@ void run_cmd(char *cmd)
                 while(*idx == ' ')
                     idx++;
                 char filename[20];
-                printf(1, "POinter at %c\n", *idx);
+                // printf(1, "POinter at %c\n", *idx);
                 while(*idx != '\0')
                     filename[i++] = *idx++;
 
@@ -246,9 +267,10 @@ void run_cmd(char *cmd)
     {
         if(isDynamic)
             free(cmd_name);
-        int pid, status;
-        pid = wait(&status);
-        printf(1, "Process %d terminated with exit code %d.\n", pid, status);
+        int status;
+        wait(&status);
+        *sts = status;
+        printf(1, "Process terminated with exit code %d.\n", status);
     }
 
 }
@@ -256,10 +278,26 @@ void run_cmd(char *cmd)
 void sucexec_parser(char *cmd)
 {
     // check for &&/|| operators
+    int status;
     if(strchr(cmd, '|')!=NULL)
     {
         char *cmds[2];
         parse_sucexec(cmd, cmds, '|');
+        // printf(1, "1st command: %s\n", cmds[0]);
+        // printf(1, "2nd command: %s\n", cmds[1]);
+        if(fork()==0)
+            run_cmd(cmds[0], &status);
+
+        int status2;
+        wait(&status2);
+        // printf(1, "status = %d\n", status);
+        if(status==0)
+            return;
+        
+        if(fork()==0)
+            run_cmd(cmds[1], &status);
+
+        wait(&status);
         // printf(1, "OR command\n");
         // for(int i=0; i<2; i++)
         //     printf(1, "%s\n", cmds[i]);
@@ -269,18 +307,65 @@ void sucexec_parser(char *cmd)
     {
         char *cmds[2];
         parse_sucexec(cmd, cmds, '&');
+        // printf(1, "1st command: %s\n", cmds[0]);
+        if(fork()==0)
+            run_cmd(cmds[0], &status);
+
+        int status2;
+        wait(&status2);
+
+        if(status==-1)
+            return;
+
+        if(fork()==0)
+            run_cmd(cmds[1], &status);
+
+        wait(&status);
         // printf(1, "AND command\n");
         // for(int i=0; i<2; i++)
         //     printf(1, "%s\n", cmds[i]);
         // sequentially run cmds[]
     }
     else
-        run_cmd(cmd);
+        run_cmd(cmd, &status);
 }
 
-void run_pipes(char *cmd1, char *cmd2)
+void run_pipe(char *cmd1, char *cmd2)
 {
+    // printf(1, "Command 1: %s\n", cmd1);
+    // printf(1, "Command 2: %s\n", cmd2);
     // call function to execute per command
+    int pipe_fd[2];
+    int status;
+    if(pipe(pipe_fd) < 0)
+    {
+        printf(1, "Pipe erro\n");
+        exit(-1);
+    }
+    // 1st child, left end of the pipe
+    if(fork()==0)
+    {
+        close(1);
+        dup(pipe_fd[1]);
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+        run_cmd(cmd1, &status);
+    }
+
+    // 2nd chlid, right end of the pipe
+    if(fork()==0)
+    {
+        close(0);
+        dup(pipe_fd[0]);
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+        run_cmd(cmd2, &status);
+    }
+
+    close(pipe_fd[0]);
+    close(pipe_fd[1]);
+    wait(0);
+    wait(0);
 }
 
 void pipe_parser(char *cmd)
@@ -295,7 +380,8 @@ void pipe_parser(char *cmd)
         //     printf(1, "%s\n", cmds[i]);
         // cmds[] contains commands
         // fork and pipe here
-        // int pipeFD[2];
+        run_pipe(cmds[0], cmds[1]);
+
 
     }
     else
@@ -304,6 +390,7 @@ void pipe_parser(char *cmd)
 
 void sc_parser(char *inputCmd)
 {
+    printf(1, "beginning to parse...\n");
     if(strchr(inputCmd, ';') != NULL)
     {
         char *cmds[2]; // can be made dynamic
@@ -324,11 +411,11 @@ void sc_parser(char *inputCmd)
             }
         }
 
-        int cpid, status;
+        int status;
         for(int i=0; i<2; i++)
         {
-            cpid = wait(&status);
-            printf(1, "Process %d terminated with exit code %d.\n", cpid, status);
+            wait(&status);
+            printf(1, "Process ; terminated with exit code %d.\n", status);
         }
     }
     else

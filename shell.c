@@ -26,7 +26,8 @@ int main(int argc, char **argv)
             i++;
         }
         cmd[i] = '\0';
-        // printf(1, "shell command is: %s\n", cmd);
+            
+        printf(1, "shell command is: %s\n", cmd);
         if(strcmp("exit", cmd)==0)
             break;
 
