@@ -93,15 +93,15 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
     }
 }
 
-void run_cmd(char *cmd, int *sts, int isPipe)
+void run_cmd(char *cmd, int *sts, int is_pipe_recv)
 {
     // check for which command, I/O redirection
-    char in_file[20];
-    char out_file[20];
+    char in_file[10];
+    char out_file[10];
     char *idx;
     int i=0;
-    char in_dir=0;
-    char out_dir=0;
+    int in_dir=0;
+    int out_dir=0;
 
     if((idx=strchr(cmd, '>'))!=NULL)
     {
@@ -134,7 +134,7 @@ void run_cmd(char *cmd, int *sts, int isPipe)
         if(in_dir)
         {
             // printf(1, "In file: %s\n", in_file);
-            fd_in = open(in_file, 0);
+            fd_in = open(in_file, O_RDONLY);
             if(fd_in < 0)
                 printf(1, "Error opening file %s!\n", in_file);
             close(0);
@@ -143,7 +143,7 @@ void run_cmd(char *cmd, int *sts, int isPipe)
         if(out_dir)
         {
             // printf(1, "Out file: %s\n", out_file);
-            fd_out = open(out_file, 1);
+            fd_out = open(out_file, O_CREATE | O_WRONLY);
             if(fd_out < 0)
                 printf(1, "Error opening file %s!\n", out_file);
             // dup2(fd_out, 1);
@@ -173,7 +173,7 @@ void run_cmd(char *cmd, int *sts, int isPipe)
         else if(strcmp(cmd_name, "cat")==0)
         {
             // parse filename if no redirection.
-            if(in_dir || isPipe)
+            if(in_dir || is_pipe_recv)
             {
                 char *args[] = {cmd_name, NULL};
                 exec(args[0], args);
@@ -202,7 +202,7 @@ void run_cmd(char *cmd, int *sts, int isPipe)
             while(*idx != ' ')
                 pattern[i++] = *idx++;
 
-            if(in_dir || isPipe)
+            if(in_dir || is_pipe_recv)
             {
                 char *args[] = {cmd_name, pattern, NULL};
                 exec(args[0], args);
@@ -251,7 +251,8 @@ void run_cmd(char *cmd, int *sts, int isPipe)
         else if(strcmp(cmd_name, "procinfo")==0)
         {
             idx = strchr(cmd, ' ');
-            while(*idx++ != ' ');
+            while(*idx == ' ')
+                idx++;
             char cpid[5];
             i=0;
             while(*idx != ' ')
@@ -259,10 +260,43 @@ void run_cmd(char *cmd, int *sts, int isPipe)
             int pid = atoi(cpid);
             // printf(1, "procinfo pid: %d\n", pid);
             procinfo(pid);
+            exit(0);
         }
         else if(strcmp(cmd_name, "executeCommands")==0)
         {
-            // implement
+            // parse filename
+            idx = strchr(cmd, ' ');
+            while(*idx == ' ')
+                idx++;
+            i=0;
+            char filename[20], file_lines[100];
+            while(*idx != ' ')
+                filename[i++] = *idx++;
+
+            char *cmds[10];
+            int fd_exec = open(filename, 0);
+            if(fd_exec < 0)
+            {
+                printf(1, "Error opening file!\n");
+                exit(-1);
+            }
+            
+            read(fd_exec, file_lines, 10000);
+            int count = 1;
+            for(char *p = file_lines; *p != '\0'; p++)
+                if(*p=='\n')
+                    count++;
+            parse_any(file_lines, cmds, '\n');
+
+            int status;
+            for(int i=0; i<count; i++)
+                sc_parser(cmds[i], &status);
+
+            for(int i=0; i<count; i++)
+                if(cmds[i] != NULL)
+                    free(cmds[i]);
+
+            exit(0);
         }
         else
         {
@@ -277,7 +311,7 @@ void run_cmd(char *cmd, int *sts, int isPipe)
         int status;
         wait(&status);
         *sts = status;
-        printf(1, "Process terminated with exit code %d.\n", status);
+        // printf(1, "Process terminated with exit code %d.\n", status);
     }
 
 }
@@ -358,7 +392,7 @@ void run_pipe(char *cmd1, char *cmd2)
     int status;
     if(pipe(pipe_fd) < 0)
     {
-        printf(1, "Pipe erro\n");
+        printf(1, "Pipe error\n");
         exit(-1);
     }
     // 1st child, left end of the pipe
@@ -368,7 +402,7 @@ void run_pipe(char *cmd1, char *cmd2)
         dup(pipe_fd[1]);
         close(pipe_fd[0]);
         close(pipe_fd[1]);
-        run_cmd(cmd1, &status, 1);
+        run_cmd(cmd1, &status, 0);
         exit(0);
     }
 
@@ -436,7 +470,7 @@ void sc_parser(char *inputCmd)
         for(int i=0; i<2; i++)
         {
             wait(&status);
-            printf(1, "Process ; terminated with exit code %d.\n", status);
+            // printf(1, "Process ; terminated with exit code %d.\n", status);
         }
     }
     else
