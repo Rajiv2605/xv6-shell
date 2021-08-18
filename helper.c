@@ -1,3 +1,5 @@
+void sc_parser(char *inputCmd);
+
 void parse_any(char *inputCmd, char **cmds, char pp)
 {
     // add safety checks here
@@ -13,9 +15,9 @@ void parse_any(char *inputCmd, char **cmds, char pp)
             while(*idx_hist == ' ')
                 idx_hist++;
             int j=0;
-            cmds[i] = malloc(10*sizeof(char));
+            cmds[i] = malloc(50*sizeof(char));
             while(*idx_hist != '\0')
-                cmds[i][j++] = *(idx_hist++);
+                cmds[i][j++] = *idx_hist++;
 
             cmds[i][j] = '\0';
 
@@ -30,10 +32,8 @@ void parse_any(char *inputCmd, char **cmds, char pp)
         char *p = inputCmd;
         int j=0;
         while(p!=idx)
-        {
-            cmds[i][j++] = *p;
-            p++;
-        }
+            cmds[i][j++] = *p++;
+
         cmds[i][j] = '\0';
         // inputCmd = idx+3; // reaching the start of the next command
         while(*idx==' ')
@@ -185,7 +185,7 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
                     idx++;
                 char filename[20];
                 i=0;
-                while(*idx != '\0')
+                while(*idx != '\0' && *idx != ' ')
                     filename[i++] = *idx++;
 
                 char *args[] = {cmd_name, filename, NULL};
@@ -288,9 +288,8 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
                     count++;
             parse_any(file_lines, cmds, '\n');
 
-            int status;
             for(int i=0; i<count; i++)
-                sc_parser(cmds[i], &status);
+                sc_parser(cmds[i]);
 
             for(int i=0; i<count; i++)
                 if(cmds[i] != NULL)
@@ -300,7 +299,7 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         }
         else
         {
-            printf(1, "Illegal command!\n");
+            printf(1, "Illegal command!: %s\n", cmd_name);
             exit(-1);
         }
     }
@@ -445,12 +444,13 @@ void pipe_parser(char *cmd)
 
 void sc_parser(char *inputCmd)
 {
-    // printf(1, "beginning to parse...\n");
+    // printf(1, "inputCmd: %s\n", inputCmd);
     if(strchr(inputCmd, ';') != NULL)
     {
         char *cmds[2]; // can be made dynamic
         parse_any(inputCmd, cmds, ';');
-        // printf(1, "PARALLEL command\n");
+        printf(1, "PARALLEL command 1: %s\n", cmds[0]);
+        printf(1, "PARALLEL command 2: %s\n", cmds[1]);
         // for(int i=0; i<2; i++)
         //     printf(1, "%s\n", cmds[i]);
         // cmds[2] contains the seperate commands
