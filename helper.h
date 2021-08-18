@@ -1,17 +1,20 @@
-// structure of a command
-struct cmd
-{
-    char *cmd;          // the command to be executed
-    char *args[10];        // arguments needed with the command
-    char redir;         // 0: no redirection, 1: >, -1: <
-    char isPipe;        // 0: no pipe around, 1: pipe exists
-    char status;        // return status of the command; useful for && and || operations
-    char seqno;         // sequence number of the command
-    char isAndOr;       // 0: none, 1: AND, -1: OR
-} *cmdTable;
+// parse the user input command.
+void parse_any(char *inputCmd, char **cmds, char pp);
 
-// build the array of commands
-void cmd_parser(char *inputCmd);
+// parse commands that have to be successively executed.
+void parse_sucexec(char *inputCmd, char **cmds, char pp);
 
-// clear the command table memory
-void free_cmdtable(void);
+// execute the command passed as argument.
+void run_cmd(char *cmd, int *sts, int is_pipe_recv);
+
+// run commands that have to be successively executed.
+void run_sucexec(char *cmd);
+
+// run the commands part of the pipe.
+void run_pipe(char *cmd1, char *cmd2);
+
+// parse the commands in the pipe.
+void pipe_parser(char *cmd);
+
+// parse the commands that have to be parallel processed.
+void sc_parser(char *inputCmd);

@@ -1,9 +1,7 @@
-void sc_parser(char *inputCmd);
+#include "helper.h"
 
 void parse_any(char *inputCmd, char **cmds, char pp)
 {
-    // add safety checks here
-
     char *idx;
     int i=0;
     char *idx_hist = NULL;
@@ -25,7 +23,7 @@ void parse_any(char *inputCmd, char **cmds, char pp)
         }
         idx_hist = idx;
         cmds[i] = malloc(50*sizeof(char));
-        idx--; // accounting for space before pipe
+        idx--; // accounting for space before pp
         while(*idx == ' ')
             idx--;
         idx++;
@@ -35,7 +33,7 @@ void parse_any(char *inputCmd, char **cmds, char pp)
             cmds[i][j++] = *p++;
 
         cmds[i][j] = '\0';
-        // inputCmd = idx+3; // reaching the start of the next command
+        // reaching the start of the next command
         while(*idx==' ')
             idx++;
         idx++;
@@ -48,8 +46,6 @@ void parse_any(char *inputCmd, char **cmds, char pp)
 
 void parse_sucexec(char *inputCmd, char **cmds, char pp)
 {
-    // add safety checks here
-
     char *idx;
     int i=0;
     char *idx_hist = NULL;
@@ -133,7 +129,6 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         int fd_out;
         if(in_dir)
         {
-            // printf(1, "In file: %s\n", in_file);
             fd_in = open(in_file, O_RDONLY);
             if(fd_in < 0)
                 printf(1, "Error opening file %s!\n", in_file);
@@ -142,11 +137,9 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         }
         if(out_dir)
         {
-            // printf(1, "Out file: %s\n", out_file);
             fd_out = open(out_file, O_CREATE | O_WRONLY);
             if(fd_out < 0)
                 printf(1, "Error opening file %s!\n", out_file);
-            // dup2(fd_out, 1);
             close(1);
             dup(fd_out);
         }
@@ -163,8 +156,7 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
             while(*idx != ' ')
                 cmd_name[i++] = *idx++;
         }
-        // i=0;
-        // printf(1, "Command name: %s\n", cmd_name);
+
         if(strcmp(cmd_name, "ls")==0)
         {
             char *args[] = {cmd_name, NULL};
@@ -207,13 +199,13 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
                 char *args[] = {cmd_name, pattern, NULL};
                 exec(args[0], args);
             }
+            // parse filename if no redirection.
             else if(!in_dir)
             {
                 i=0;
                 while(*idx == ' ')
                     idx++;
                 char filename[20];
-                // printf(1, "POinter at %c\n", *idx);
                 while(*idx != '\0')
                     filename[i++] = *idx++;
 
@@ -221,7 +213,6 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
                 exec(args[0], args);
             }
 
-            // parse filename if no redirection.
         }
         else if(strcmp(cmd_name, "echo")==0)
         {
@@ -234,14 +225,11 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
                 echo_string[i++] = *idx++;
             char *args[] = {cmd_name, echo_string, NULL};
             exec(cmd_name, args);
-            // exit(0);
         }
         else if(strcmp(cmd_name, "wc")==0)
         {
-            // dk how to handle this.
             char *args[] = {cmd_name, NULL};
             exec(args[0], args);
-            // exit(0);
         }
         else if(strcmp(cmd_name, "ps")==0)
         {
@@ -258,7 +246,6 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
             while(*idx != ' ')
                 cpid[i++] = *idx++;
             int pid = atoi(cpid);
-            // printf(1, "procinfo pid: %d\n", pid);
             procinfo(pid);
             exit(0);
         }
@@ -299,7 +286,7 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         }
         else
         {
-            printf(1, "Illegal command!: %s\n", cmd_name);
+            printf(1, "Illegal command or arguments\n", cmd_name);
             exit(-1);
         }
     }
@@ -310,12 +297,11 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         int status;
         wait(&status);
         *sts = status;
-        // printf(1, "Process terminated with exit code %d.\n", status);
     }
 
 }
 
-void sucexec_parser(char *cmd)
+void run_sucexec(char *cmd)
 {
     // check for &&/|| operators
     int status;
@@ -323,8 +309,6 @@ void sucexec_parser(char *cmd)
     {
         char *cmds[2];
         parse_sucexec(cmd, cmds, '|');
-        // printf(1, "1st command: %s\n", cmds[0]);
-        // printf(1, "2nd command: %s\n", cmds[1]);
         if(fork()==0)
         {
             run_cmd(cmds[0], &status, 0);
@@ -333,7 +317,7 @@ void sucexec_parser(char *cmd)
 
         int status2;
         wait(&status2);
-        // printf(1, "status = %d\n", status);
+
         if(status==0)
             return;
         
@@ -344,16 +328,11 @@ void sucexec_parser(char *cmd)
         }
 
         wait(&status);
-        // printf(1, "OR command\n");
-        // for(int i=0; i<2; i++)
-        //     printf(1, "%s\n", cmds[i]);
-        // sequentially run cmds[]
     }
     else if(strchr(cmd, '&') != NULL)
     {
         char *cmds[2];
         parse_sucexec(cmd, cmds, '&');
-        // printf(1, "1st command: %s\n", cmds[0]);
         if(fork()==0)
         {
             run_cmd(cmds[0], &status, 0);
@@ -373,10 +352,6 @@ void sucexec_parser(char *cmd)
         }
 
         wait(&status);
-        // printf(1, "AND command\n");
-        // for(int i=0; i<2; i++)
-        //     printf(1, "%s\n", cmds[i]);
-        // sequentially run cmds[]
     }
     else
         run_cmd(cmd, &status, 0);
@@ -384,8 +359,6 @@ void sucexec_parser(char *cmd)
 
 void run_pipe(char *cmd1, char *cmd2)
 {
-    // printf(1, "Command 1: %s\n", cmd1);
-    // printf(1, "Command 2: %s\n", cmd2);
     // call function to execute per command
     int pipe_fd[2];
     int status;
@@ -429,9 +402,7 @@ void pipe_parser(char *cmd)
     {
         char *cmds[10];
         parse_any(cmd, cmds, '|');
-        // printf(1, "PIPE command\n");
-        // for(int i=0; i<2; i++)
-        //     printf(1, "%s\n", cmds[i]);
+
         // cmds[] contains commands
         // fork and pipe here
         run_pipe(cmds[0], cmds[1]);
@@ -439,20 +410,16 @@ void pipe_parser(char *cmd)
         free(cmds[1]);
     }
     else
-        sucexec_parser(cmd);
+        run_sucexec(cmd);
 }
 
 void sc_parser(char *inputCmd)
 {
-    // printf(1, "inputCmd: %s\n", inputCmd);
     if(strchr(inputCmd, ';') != NULL)
     {
         char *cmds[2]; // can be made dynamic
         parse_any(inputCmd, cmds, ';');
-        printf(1, "PARALLEL command 1: %s\n", cmds[0]);
-        printf(1, "PARALLEL command 2: %s\n", cmds[1]);
-        // for(int i=0; i<2; i++)
-        //     printf(1, "%s\n", cmds[i]);
+
         // cmds[2] contains the seperate commands
         // fork here and run pipe parser
         for(int i=0; i<2; i++)
@@ -468,10 +435,7 @@ void sc_parser(char *inputCmd)
 
         int status;
         for(int i=0; i<2; i++)
-        {
             wait(&status);
-            // printf(1, "Process ; terminated with exit code %d.\n", status);
-        }
     }
     else
         pipe_parser(inputCmd);
