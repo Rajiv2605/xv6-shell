@@ -13,7 +13,7 @@ void parse_any(char *inputCmd, char **cmds, char pp)
             while(*idx_hist == ' ')
                 idx_hist++;
             int j=0;
-            cmds[i] = malloc(50*sizeof(char));
+            cmds[i] = malloc(100*sizeof(char));
             while(*idx_hist != '\0')
                 cmds[i][j++] = *idx_hist++;
 
@@ -22,7 +22,7 @@ void parse_any(char *inputCmd, char **cmds, char pp)
             break;
         }
         idx_hist = idx;
-        cmds[i] = malloc(50*sizeof(char));
+        cmds[i] = malloc(100*sizeof(char));
         idx--; // accounting for space before pp
         while(*idx == ' ')
             idx--;
@@ -57,7 +57,7 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
             while(*idx_hist == ' ')
                 idx_hist++;
             int j=0;
-            cmds[i] = malloc(10*sizeof(char));
+            cmds[i] = malloc(100*sizeof(char));
             while(*idx_hist != '\0')
                 cmds[i][j++] = *(idx_hist++);
 
@@ -66,7 +66,7 @@ void parse_sucexec(char *inputCmd, char **cmds, char pp)
             break;
         }
         idx_hist = idx;
-        cmds[i] = malloc(50*sizeof(char));
+        cmds[i] = malloc(100*sizeof(char));
         idx--; // accounting for space before operator
         while(*idx==' ')
             idx--;
@@ -121,12 +121,12 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
 
     char *cmd_name;
     int isDynamic = 0;
+    // open files if needed for I/O redirection
+    int fd_in = -1;
+    int fd_out = -1;
 
     if(fork()==0)
     {
-        // open files if needed
-        int fd_in;
-        int fd_out;
         if(in_dir)
         {
             fd_in = open(in_file, O_RDONLY);
@@ -150,7 +150,7 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         else
         {
             isDynamic = 1;
-            cmd_name = malloc(sizeof(char)*15);
+            cmd_name = malloc(sizeof(char)*30);
             idx = cmd;
             i=0;
             while(*idx != ' ')
@@ -282,6 +282,8 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
                 if(cmds[i] != NULL)
                     free(cmds[i]);
 
+            close(fd_exec);
+
             exit(0);
         }
         else
@@ -297,6 +299,10 @@ void run_cmd(char *cmd, int *sts, int is_pipe_recv)
         int status;
         wait(&status);
         *sts = status;
+        if(fd_in >= 0)
+            close(fd_in);
+        if(fd_out >= 0)
+            close(fd_out);
     }
 
 }
@@ -313,6 +319,7 @@ void run_sucexec(char *cmd)
         {
             run_cmd(cmds[0], &status, 0);
             free(cmds[0]);
+            exit(0);
         }
 
         int status2;
@@ -325,6 +332,7 @@ void run_sucexec(char *cmd)
         {
             run_cmd(cmds[1], &status, 0);
             free(cmds[1]);
+            exit(0);
         }
 
         wait(&status);
@@ -337,6 +345,7 @@ void run_sucexec(char *cmd)
         {
             run_cmd(cmds[0], &status, 0);
             free(cmds[0]);
+            exit(0);
         }
 
         int status2;
@@ -349,6 +358,7 @@ void run_sucexec(char *cmd)
         {
             run_cmd(cmds[1], &status, 0);
             free(cmds[1]);
+            exit(0);
         }
 
         wait(&status);
